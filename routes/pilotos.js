@@ -9,6 +9,18 @@ router.get('/', async (req, res) => {
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
+router.get('/instructores', async (req, res) => {
+  try {
+    await getDb();
+    const data = all(`
+      SELECT * FROM pilotos
+      WHERE rol = 'Instructor' AND activo = 1
+      ORDER BY apellido, nombre
+    `);
+    res.json({ ok: true, data });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
 router.get('/:id', async (req, res) => {
   try {
     await getDb();
@@ -21,11 +33,21 @@ router.get('/:id', async (req, res) => {
 router.post('/', async (req, res) => {
   try {
     await getDb();
-    const { nombre, apellido, dni, licencia, categoria, horas_vuelo=0, email='', telefono='' } = req.body;
+    const {
+      nombre, apellido, dni, licencia, categoria,
+      horas_vuelo = 0, email = '', telefono = '',
+      rol = 'Piloto', licencia_instruccion = '', especialidades = ''
+    } = req.body;
     if (!nombre || !apellido || !dni || !licencia || !categoria)
       return res.status(400).json({ ok: false, error: 'Campos obligatorios: nombre, apellido, dni, licencia, categoria' });
-    run('INSERT INTO pilotos (nombre,apellido,dni,licencia,categoria,horas_vuelo,email,telefono) VALUES (?,?,?,?,?,?,?,?)',
-      [nombre, apellido, dni, licencia, categoria, horas_vuelo, email, telefono]);
+    if (rol === 'Instructor' && !licencia_instruccion)
+      return res.status(400).json({ ok: false, error: 'El instructor debe tener una licencia de instrucción' });
+    run(
+      `INSERT INTO pilotos
+        (nombre, apellido, dni, licencia, categoria, horas_vuelo, email, telefono, rol, licencia_instruccion, especialidades)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+      [nombre, apellido, dni, licencia, categoria, horas_vuelo, email, telefono, rol, licencia_instruccion, especialidades]
+    );
     res.status(201).json({ ok: true, data: get('SELECT * FROM pilotos WHERE id=?', [lastId('pilotos')]) });
   } catch (e) {
     if (e.message.includes('UNIQUE')) return res.status(409).json({ ok: false, error: 'El DNI ya existe' });
@@ -36,9 +58,21 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     await getDb();
-    const { nombre, apellido, dni, licencia, categoria, horas_vuelo, email, telefono, activo=1 } = req.body;
-    run('UPDATE pilotos SET nombre=?,apellido=?,dni=?,licencia=?,categoria=?,horas_vuelo=?,email=?,telefono=?,activo=? WHERE id=?',
-      [nombre, apellido, dni, licencia, categoria, horas_vuelo, email, telefono, activo, req.params.id]);
+    const {
+      nombre, apellido, dni, licencia, categoria,
+      horas_vuelo, email, telefono, activo = 1,
+      rol = 'Piloto', licencia_instruccion = '', especialidades = ''
+    } = req.body;
+    if (rol === 'Instructor' && !licencia_instruccion)
+      return res.status(400).json({ ok: false, error: 'El instructor debe tener una licencia de instrucción' });
+    run(
+      `UPDATE pilotos SET
+        nombre=?, apellido=?, dni=?, licencia=?, categoria=?, horas_vuelo=?,
+        email=?, telefono=?, activo=?, rol=?, licencia_instruccion=?, especialidades=?
+       WHERE id=?`,
+      [nombre, apellido, dni, licencia, categoria, horas_vuelo,
+       email, telefono, activo, rol, licencia_instruccion, especialidades, req.params.id]
+    );
     res.json({ ok: true, data: get('SELECT * FROM pilotos WHERE id=?', [req.params.id]) });
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });

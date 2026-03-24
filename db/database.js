@@ -50,7 +50,13 @@ function initSchema() {
     id INTEGER PRIMARY KEY AUTOINCREMENT, nombre TEXT NOT NULL, apellido TEXT NOT NULL,
     dni TEXT UNIQUE NOT NULL, licencia TEXT NOT NULL, categoria TEXT NOT NULL,
     horas_vuelo REAL DEFAULT 0, email TEXT, telefono TEXT, activo INTEGER DEFAULT 1,
+    rol TEXT DEFAULT 'Piloto', licencia_instruccion TEXT, especialidades TEXT,
     created_at TEXT DEFAULT (datetime('now')))`);
+
+  // Migración: agregar columnas de instructor si no existen (DBs previas)
+  try { db.run(`ALTER TABLE pilotos ADD COLUMN rol TEXT DEFAULT 'Piloto'`); } catch(e) {}
+  try { db.run(`ALTER TABLE pilotos ADD COLUMN licencia_instruccion TEXT`); } catch(e) {}
+  try { db.run(`ALTER TABLE pilotos ADD COLUMN especialidades TEXT`); } catch(e) {}
 
   db.run(`CREATE TABLE IF NOT EXISTS aeronaves (
     id INTEGER PRIMARY KEY AUTOINCREMENT, matricula TEXT UNIQUE NOT NULL,

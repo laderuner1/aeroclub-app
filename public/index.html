@@ -17,9 +17,10 @@
 
 <!-- NAV -->
 <nav>
-  <button data-tab="vuelos"    onclick="setTab('vuelos')"    class="active">✈️ Vuelos</button>
-  <button data-tab="pilotos"   onclick="setTab('pilotos')"           >👨‍✈️ Pilotos</button>
-  <button data-tab="aeronaves" onclick="setTab('aeronaves')"         >🛩️ Aeronaves</button>
+  <button data-tab="vuelos"       onclick="setTab('vuelos')"       class="active">✈️ Vuelos</button>
+  <button data-tab="pilotos"      onclick="setTab('pilotos')"              >👨‍✈️ Pilotos</button>
+  <button data-tab="instructores" onclick="setTab('instructores')"         >🎓 Instructores</button>
+  <button data-tab="aeronaves"    onclick="setTab('aeronaves')"            >🛩️ Aeronaves</button>
 </nav>
 
 <!-- MAIN -->
@@ -76,11 +77,41 @@
           <thead>
             <tr>
               <th>Nombre</th><th>DNI</th><th>Licencia</th>
-              <th>Categoría</th><th>Horas de Vuelo</th><th>Email</th><th>Acciones</th>
+              <th>Categoría</th><th>Rol</th><th>Horas de Vuelo</th><th>Email</th><th>Acciones</th>
             </tr>
           </thead>
           <tbody id="pilotos-tbody">
-            <tr><td colspan="7" style="text-align:center;padding:32px;color:#94a3b8">Cargando...</td></tr>
+            <tr><td colspan="8" style="text-align:center;padding:32px;color:#94a3b8">Cargando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: INSTRUCTORES -->
+  <div id="tab-instructores" class="tab-content" style="display:none">
+    <div class="card">
+      <div class="card-header">
+        <h2>🎓 Reporte de Instructores</h2>
+        <button class="btn btn-primary" onclick="openPilotoModal(null, true)">+ Nuevo Instructor</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>DNI</th>
+              <th>Lic. Piloto</th>
+              <th>Categoría</th>
+              <th>Lic. Instrucción</th>
+              <th>Especialidades</th>
+              <th>Horas de Vuelo</th>
+              <th>Contacto</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="instructores-tbody">
+            <tr><td colspan="9" style="text-align:center;padding:32px;color:#94a3b8">Cargando...</td></tr>
           </tbody>
         </table>
       </div>
@@ -229,6 +260,34 @@
         <div class="form-group">
           <label>Teléfono</label>
           <input type="text" id="p-tel" placeholder="351-111-2222">
+        </div>
+        <div class="form-group form-full">
+          <label>Rol</label>
+          <select id="p-rol" onchange="toggleInstructorFields()">
+            <option value="Piloto">Piloto</option>
+            <option value="Instructor">Piloto Instructor</option>
+          </select>
+        </div>
+        <!-- Campos solo visibles para Instructores -->
+        <div id="instructor-fields" style="display:none; grid-column:1/-1; display:none">
+          <div class="form-grid" style="grid-template-columns:1fr 1fr; gap:16px">
+            <div class="form-group">
+              <label>Licencia de Instrucción *</label>
+              <input type="text" id="p-lic-inst" placeholder="FI-0001">
+            </div>
+            <div class="form-group">
+              <label>Especialidades</label>
+              <select id="p-especialidades" multiple size="4" style="height:auto">
+                <option value="PPL">PPL - Piloto Privado</option>
+                <option value="CPL">CPL - Piloto Comercial</option>
+                <option value="IFR">IFR - Vuelo Instrumental</option>
+                <option value="PVL">PVL - Planeador</option>
+                <option value="Acrobacia">Acrobacia</option>
+                <option value="Ultraliviano">Ultraliviano</option>
+              </select>
+              <small style="color:#94a3b8;font-size:.75rem">Ctrl+clic para seleccionar varias</small>
+            </div>
+          </div>
         </div>
       </div>
     </div>

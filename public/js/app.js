@@ -49,6 +49,12 @@ function badgeCategoria(cat) {
   return `<span class="badge ${map[cat] || 'badge-gray'}">${cat}</span>`;
 }
 
+function badgeRol(rol) {
+  return rol === 'Instructor'
+    ? `<span class="badge badge-amber">🎓 Instructor</span>`
+    : `<span class="badge badge-gray">Piloto</span>`;
+}
+
 function formatDuracion(min) {
   if (!min) return '—';
   const h = Math.floor(min / 60);
@@ -81,9 +87,10 @@ function setTab(tab) {
     s.style.display = 'none'
   );
   $(`tab-${tab}`).style.display = 'block';
-  if (tab === 'vuelos')    loadVuelos();
-  if (tab === 'pilotos')   loadPilotos();
-  if (tab === 'aeronaves') loadAeronaves();
+  if (tab === 'vuelos')       loadVuelos();
+  if (tab === 'pilotos')      loadPilotos();
+  if (tab === 'instructores') loadInstructores();
+  if (tab === 'aeronaves')    loadAeronaves();
 }
 
 // ===================== VUELOS =====================
@@ -255,7 +262,7 @@ async function loadPilotos() {
     const { data } = await api('/pilotos');
     const tbody = $('pilotos-tbody');
     if (!data.length) {
-      tbody.innerHTML = `<tr><td colspan="7">
+      tbody.innerHTML = `<tr><td colspan="8">
         <div class="empty"><div class="icon">👨‍✈️</div>
         <p>No hay pilotos registrados</p>
         <button class="btn btn-primary" style="margin-top:12px" onclick="openPilotoModal()">+ Agregar primer piloto</button>
@@ -268,6 +275,7 @@ async function loadPilotos() {
         <td>${p.dni}</td>
         <td>${p.licencia}</td>
         <td>${badgeCategoria(p.categoria)}</td>
+        <td>${badgeRol(p.rol || 'Piloto')}</td>
         <td>${(+p.horas_vuelo).toFixed(1)} hs</td>
         <td>${p.email || '—'}</td>
         <td style="white-space:nowrap">
@@ -278,7 +286,12 @@ async function loadPilotos() {
   } catch (e) { /* manejado */ }
 }
 
-function openPilotoModal(p = null) {
+function toggleInstructorFields() {
+  const isInstructor = $('p-rol').value === 'Instructor';
+  $('instructor-fields').style.display = isInstructor ? 'block' : 'none';
+}
+
+function openPilotoModal(p = null, forceInstructor = false) {
   $('modal-piloto-title').textContent = p ? 'Editar Piloto' : 'Nuevo Piloto';
   $('form-piloto').dataset.id = p ? p.id : '';
 
@@ -291,11 +304,22 @@ function openPilotoModal(p = null) {
     $('p-horas').value     = p.horas_vuelo;
     $('p-email').value     = p.email || '';
     $('p-tel').value       = p.telefono || '';
+    $('p-rol').value       = p.rol || 'Piloto';
+    $('p-lic-inst').value  = p.licencia_instruccion || '';
+    // Restaurar especialidades seleccionadas
+    const esp = (p.especialidades || '').split(',').map(s => s.trim()).filter(Boolean);
+    Array.from($('p-especialidades').options).forEach(opt => {
+      opt.selected = esp.includes(opt.value);
+    });
   } else {
     $('form-piloto').querySelectorAll('input').forEach(el => el.value = '');
     $('p-categoria').value = 'PPL';
     $('p-horas').value     = '0';
+    $('p-rol').value       = forceInstructor ? 'Instructor' : 'Piloto';
+    $('p-lic-inst').value  = '';
+    Array.from($('p-especialidades').options).forEach(opt => opt.selected = false);
   }
+  toggleInstructorFields();
   $('modal-piloto').classList.add('open');
   $('p-nombre').focus();
 }
@@ -325,31 +349,80 @@ async function savePiloto() {
   const dni       = $('p-dni').value.trim();
   const licencia  = $('p-licencia').value.trim();
   const categoria = $('p-categoria').value;
+  const rol       = $('p-rol').value;
+  const licencia_instruccion = $('p-lic-inst').value.trim();
+  const especialidades = Array.from($('p-especialidades').selectedOptions)
+    .map(o => o.value).join(', ');
 
   if (!nombre)   { toast('Ingresá el nombre', 'error');    $('p-nombre').focus();   return; }
   if (!apellido) { toast('Ingresá el apellido', 'error');  $('p-apellido').focus(); return; }
   if (!dni)      { toast('Ingresá el DNI', 'error');       $('p-dni').focus();      return; }
   if (!licencia) { toast('Ingresá la licencia', 'error');  $('p-licencia').focus(); return; }
+  if (rol === 'Instructor' && !licencia_instruccion) {
+    toast('Ingresá la licencia de instrucción', 'error');
+    $('p-lic-inst').focus();
+    return;
+  }
 
   const body = {
     nombre, apellido, dni, licencia, categoria,
     horas_vuelo: +$('p-horas').value || 0,
     email:       $('p-email').value.trim() || null,
     telefono:    $('p-tel').value.trim()   || null,
-    activo:      1
+    activo:      1,
+    rol,
+    licencia_instruccion: licencia_instruccion || null,
+    especialidades:       especialidades       || null
   };
 
   try {
     if (id) {
       await api(`/pilotos/${id}`, { method: 'PUT', body });
-      toast('👨‍✈️ Piloto actualizado');
+      toast(rol === 'Instructor' ? '🎓 Instructor actualizado' : '👨‍✈️ Piloto actualizado');
     } else {
       await api('/pilotos', { method: 'POST', body });
-      toast('👨‍✈️ Piloto registrado');
+      toast(rol === 'Instructor' ? '🎓 Instructor registrado' : '👨‍✈️ Piloto registrado');
     }
     $('modal-piloto').classList.remove('open');
     loadPilotos();
+    if (currentTab === 'instructores') loadInstructores();
     loadStats();
+  } catch (e) { /* manejado */ }
+}
+
+// ===================== INSTRUCTORES =====================
+async function loadInstructores() {
+  try {
+    const { data } = await api('/pilotos/instructores');
+    const tbody = $('instructores-tbody');
+    if (!data.length) {
+      tbody.innerHTML = `<tr><td colspan="9">
+        <div class="empty"><div class="icon">🎓</div>
+        <p>No hay instructores registrados</p>
+        <button class="btn btn-primary" style="margin-top:12px" onclick="openPilotoModal(null, true)">+ Agregar primer instructor</button>
+        </div></td></tr>`;
+      return;
+    }
+    tbody.innerHTML = data.map(p => `
+      <tr>
+        <td><strong>${p.apellido}, ${p.nombre}</strong></td>
+        <td>${p.dni}</td>
+        <td>${p.licencia}</td>
+        <td>${badgeCategoria(p.categoria)}</td>
+        <td><strong>${p.licencia_instruccion || '—'}</strong></td>
+        <td>${p.especialidades ? p.especialidades.split(',').map(e =>
+          `<span class="badge badge-blue" style="margin:1px">${e.trim()}</span>`
+        ).join(' ') : '—'}</td>
+        <td>${(+p.horas_vuelo).toFixed(1)} hs</td>
+        <td>
+          ${p.email    ? `<small>${p.email}</small><br>` : ''}
+          ${p.telefono ? `<small style="color:#64748b">${p.telefono}</small>` : (!p.email ? '—' : '')}
+        </td>
+        <td style="white-space:nowrap">
+          <button class="btn btn-sm btn-primary" onclick="editPiloto(${p.id})" title="Editar">✏️</button>
+          <button class="btn btn-sm btn-danger"  onclick="deletePiloto(${p.id})" title="Eliminar">🗑️</button>
+        </td>
+      </tr>`).join('');
   } catch (e) { /* manejado */ }
 }
 
