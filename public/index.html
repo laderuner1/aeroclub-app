@@ -52,13 +52,14 @@
               <th>Aeronave</th>
               <th>Ruta</th>
               <th>Tipo</th>
+              <th>Instructor</th>
               <th>Duración</th>
               <th>Estado</th>
               <th>Acciones</th>
             </tr>
           </thead>
           <tbody id="vuelos-tbody">
-            <tr><td colspan="8" style="text-align:center;padding:32px;color:#94a3b8">Cargando...</td></tr>
+            <tr><td colspan="9" style="text-align:center;padding:32px;color:#94a3b8">Cargando...</td></tr>
           </tbody>
         </table>
       </div>
@@ -166,11 +167,17 @@
         </div>
         <div class="form-group">
           <label>Tipo de Vuelo</label>
-          <select id="v-tipo">
+          <select id="v-tipo" onchange="toggleInstructorVuelo()">
             <option>Local</option>
             <option>Instruccion</option>
             <option>Traslado</option>
             <option>Acrobatico</option>
+          </select>
+        </div>
+        <div class="form-group form-full" id="instructor-vuelo-field" style="display:none">
+          <label>Instructor a Cargo *</label>
+          <select id="v-instructor">
+            <option value="">— Seleccionar instructor —</option>
           </select>
         </div>
         <div class="form-group">

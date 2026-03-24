@@ -116,6 +116,9 @@ async function loadVuelos() {
         <td><strong>${v.aeronave_matricula}</strong><br><small style="color:#64748b">${v.aeronave_descripcion}</small></td>
         <td>${v.origen} → ${v.destino}</td>
         <td>${v.tipo_vuelo}</td>
+        <td>${v.tipo_vuelo === 'Instruccion' && v.instructor_nombre
+          ? `${v.instructor_nombre}<br><small style="color:#64748b">${v.instructor_licencia || ''}</small>`
+          : '—'}</td>
         <td>${formatDuracion(v.duracion_min)}</td>
         <td>${badgeEstado(v.estado)}</td>
         <td style="white-space:nowrap">
@@ -126,22 +129,28 @@ async function loadVuelos() {
   } catch (e) { /* manejado en api() */ }
 }
 
-// Abrir modal nuevo vuelo — carga pilotos y aeronaves frescos desde la API
+function toggleInstructorVuelo() {
+  const isInstruccion = $('v-tipo').value === 'Instruccion';
+  $('instructor-vuelo-field').style.display = isInstruccion ? 'block' : 'none';
+  if (!isInstruccion) $('v-instructor').value = '';
+}
+
+// Abrir modal nuevo vuelo — carga pilotos, aeronaves e instructores desde la API
 async function openVueloModal(vuelo = null) {
   const modal = $('modal-vuelo');
   $('modal-vuelo-title').textContent = vuelo ? 'Editar Vuelo' : 'Nuevo Vuelo';
   $('form-vuelo').dataset.id = vuelo ? vuelo.id : '';
 
-  // Mostrar modal con estado de carga
-  $('v-piloto').innerHTML   = '<option value="">Cargando pilotos...</option>';
-  $('v-aeronave').innerHTML = '<option value="">Cargando aeronaves...</option>';
+  $('v-piloto').innerHTML    = '<option value="">Cargando pilotos...</option>';
+  $('v-aeronave').innerHTML  = '<option value="">Cargando aeronaves...</option>';
+  $('v-instructor').innerHTML = '<option value="">Cargando instructores...</option>';
   modal.classList.add('open');
 
-  // Cargar pilotos y aeronaves en paralelo (sin depender de cache)
   try {
-    const [pRes, aRes] = await Promise.all([
+    const [pRes, aRes, iRes] = await Promise.all([
       api('/pilotos'),
-      api('/aeronaves')
+      api('/aeronaves'),
+      api('/pilotos/instructores')
     ]);
 
     $('v-piloto').innerHTML =
@@ -158,26 +167,33 @@ async function openVueloModal(vuelo = null) {
         .map(a => `<option value="${a.id}">${a.matricula} · ${a.marca} ${a.modelo} (${a.tipo})</option>`)
         .join('');
 
-    // Si es edición, pre-cargar valores
+    $('v-instructor').innerHTML =
+      '<option value="">— Seleccionar instructor —</option>' +
+      iRes.data
+        .map(i => `<option value="${i.id}">${i.apellido}, ${i.nombre} (${i.licencia_instruccion || i.licencia})</option>`)
+        .join('');
+
     if (vuelo) {
-      $('v-piloto').value     = vuelo.piloto_id;
-      $('v-aeronave').value   = vuelo.aeronave_id;
-      $('v-fecha').value      = vuelo.fecha;
-      $('v-despegue').value   = vuelo.hora_despegue;
-      $('v-aterrizaje').value = vuelo.hora_aterrizaje || '';
-      $('v-duracion').value   = vuelo.duracion_min || '';
-      $('v-origen').value     = vuelo.origen;
-      $('v-destino').value    = vuelo.destino;
-      $('v-tipo').value       = vuelo.tipo_vuelo;
-      $('v-estado').value     = vuelo.estado;
-      $('v-obs').value        = vuelo.observaciones || '';
+      $('v-piloto').value      = vuelo.piloto_id;
+      $('v-aeronave').value    = vuelo.aeronave_id;
+      $('v-fecha').value       = vuelo.fecha;
+      $('v-despegue').value    = vuelo.hora_despegue;
+      $('v-aterrizaje').value  = vuelo.hora_aterrizaje || '';
+      $('v-duracion').value    = vuelo.duracion_min || '';
+      $('v-origen').value      = vuelo.origen;
+      $('v-destino').value     = vuelo.destino;
+      $('v-tipo').value        = vuelo.tipo_vuelo;
+      $('v-estado').value      = vuelo.estado;
+      $('v-obs').value         = vuelo.observaciones || '';
+      $('v-instructor').value  = vuelo.instructor_id || '';
     } else {
-      // Valores por defecto para nuevo vuelo
       $('form-vuelo').querySelectorAll('input, textarea').forEach(el => el.value = '');
       $('v-fecha').value  = new Date().toISOString().split('T')[0];
       $('v-tipo').value   = 'Local';
       $('v-estado').value = 'Planificado';
+      $('v-instructor').value = '';
     }
+    toggleInstructorVuelo();
   } catch (e) {
     modal.classList.remove('open');
   }
@@ -211,12 +227,20 @@ async function saveVuelo() {
   const origen      = $('v-origen').value.trim();
   const destino     = $('v-destino').value.trim();
 
-  if (!piloto_id)   { toast('Seleccioná un piloto', 'error');   $('v-piloto').focus();   return; }
-  if (!aeronave_id) { toast('Seleccioná una aeronave', 'error');$('v-aeronave').focus(); return; }
-  if (!fecha)       { toast('Ingresá la fecha', 'error');       $('v-fecha').focus();    return; }
-  if (!despegue)    { toast('Ingresá hora de despegue', 'error');$('v-despegue').focus();return; }
-  if (!origen)      { toast('Ingresá el origen', 'error');      $('v-origen').focus();   return; }
-  if (!destino)     { toast('Ingresá el destino', 'error');     $('v-destino').focus();  return; }
+  const tipo_vuelo   = $('v-tipo').value;
+  const instructor_id = $('v-instructor').value;
+
+  if (!piloto_id)    { toast('Seleccioná un piloto', 'error');      $('v-piloto').focus();    return; }
+  if (!aeronave_id)  { toast('Seleccioná una aeronave', 'error');   $('v-aeronave').focus();  return; }
+  if (!fecha)        { toast('Ingresá la fecha', 'error');          $('v-fecha').focus();     return; }
+  if (!despegue)     { toast('Ingresá hora de despegue', 'error');  $('v-despegue').focus();  return; }
+  if (!origen)       { toast('Ingresá el origen', 'error');         $('v-origen').focus();    return; }
+  if (!destino)      { toast('Ingresá el destino', 'error');        $('v-destino').focus();   return; }
+  if (tipo_vuelo === 'Instruccion' && !instructor_id) {
+    toast('Seleccioná un instructor a cargo', 'error');
+    $('v-instructor').focus();
+    return;
+  }
 
   // Calcular duración automáticamente si hay hora aterrizaje
   const aterrizaje  = $('v-aterrizaje').value;
@@ -237,9 +261,10 @@ async function saveVuelo() {
     duracion_min,
     origen,
     destino,
-    tipo_vuelo:      $('v-tipo').value,
+    tipo_vuelo,
     estado:          $('v-estado').value,
     observaciones:   $('v-obs').value.trim() || null,
+    instructor_id:   instructor_id ? +instructor_id : null,
   };
 
   try {

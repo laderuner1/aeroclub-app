@@ -7,10 +7,13 @@ const SELECT_VUELO = `
     p.nombre || ' ' || p.apellido AS piloto_nombre,
     p.licencia  AS piloto_licencia,
     a.matricula AS aeronave_matricula,
-    a.marca || ' ' || a.modelo AS aeronave_descripcion
+    a.marca || ' ' || a.modelo AS aeronave_descripcion,
+    i.nombre || ' ' || i.apellido AS instructor_nombre,
+    i.licencia_instruccion       AS instructor_licencia
   FROM vuelos v
   JOIN pilotos   p ON v.piloto_id   = p.id
   JOIN aeronaves a ON v.aeronave_id = a.id
+  LEFT JOIN pilotos i ON v.instructor_id = i.id
 `;
 
 router.get('/', async (req, res) => {
@@ -58,12 +61,15 @@ router.get('/:id', async (req, res) => {
 router.post('/', async (req, res) => {
   try {
     await getDb();
-    const { piloto_id, aeronave_id, fecha, hora_despegue, origen, destino, tipo_vuelo='Local', observaciones=null } = req.body;
+    const { piloto_id, aeronave_id, fecha, hora_despegue, origen, destino,
+            tipo_vuelo = 'Local', observaciones = null, instructor_id = null } = req.body;
     if (!piloto_id || !aeronave_id || !fecha || !hora_despegue || !origen || !destino)
       return res.status(400).json({ ok: false, error: 'Faltan campos obligatorios' });
-    run(`INSERT INTO vuelos (piloto_id,aeronave_id,fecha,hora_despegue,origen,destino,tipo_vuelo,observaciones,estado)
-         VALUES (?,?,?,?,?,?,?,?,'Planificado')`,
-      [piloto_id, aeronave_id, fecha, hora_despegue, origen, destino, tipo_vuelo, observaciones]);
+    if (tipo_vuelo === 'Instruccion' && !instructor_id)
+      return res.status(400).json({ ok: false, error: 'Los vuelos de instrucción requieren un instructor a cargo' });
+    run(`INSERT INTO vuelos (piloto_id,aeronave_id,fecha,hora_despegue,origen,destino,tipo_vuelo,observaciones,estado,instructor_id)
+         VALUES (?,?,?,?,?,?,?,?,'Planificado',?)`,
+      [piloto_id, aeronave_id, fecha, hora_despegue, origen, destino, tipo_vuelo, observaciones, instructor_id]);
     res.status(201).json({ ok: true, data: get(SELECT_VUELO + ' WHERE v.id=?', [lastId('vuelos')]) });
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
@@ -71,13 +77,16 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     await getDb();
-    const { piloto_id, aeronave_id, fecha, hora_despegue, hora_aterrizaje=null,
-            duracion_min=null, origen, destino, tipo_vuelo, observaciones=null, estado } = req.body;
+    const { piloto_id, aeronave_id, fecha, hora_despegue, hora_aterrizaje = null,
+            duracion_min = null, origen, destino, tipo_vuelo, observaciones = null,
+            estado, instructor_id = null } = req.body;
+    if (tipo_vuelo === 'Instruccion' && !instructor_id)
+      return res.status(400).json({ ok: false, error: 'Los vuelos de instrucción requieren un instructor a cargo' });
     run(`UPDATE vuelos SET piloto_id=?,aeronave_id=?,fecha=?,hora_despegue=?,
-         hora_aterrizaje=?,duracion_min=?,origen=?,destino=?,tipo_vuelo=?,observaciones=?,estado=?
+         hora_aterrizaje=?,duracion_min=?,origen=?,destino=?,tipo_vuelo=?,observaciones=?,estado=?,instructor_id=?
          WHERE id=?`,
       [piloto_id, aeronave_id, fecha, hora_despegue, hora_aterrizaje,
-       duracion_min, origen, destino, tipo_vuelo, observaciones, estado, req.params.id]);
+       duracion_min, origen, destino, tipo_vuelo, observaciones, estado, instructor_id, req.params.id]);
     res.json({ ok: true, data: get(SELECT_VUELO + ' WHERE v.id=?', [req.params.id]) });
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });

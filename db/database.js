@@ -69,7 +69,11 @@ function initSchema() {
     aeronave_id INTEGER NOT NULL, fecha TEXT NOT NULL, hora_despegue TEXT NOT NULL,
     hora_aterrizaje TEXT, duracion_min INTEGER, origen TEXT NOT NULL, destino TEXT NOT NULL,
     tipo_vuelo TEXT DEFAULT 'Local', observaciones TEXT, estado TEXT DEFAULT 'Planificado',
+    instructor_id INTEGER,
     created_at TEXT DEFAULT (datetime('now')))`);
+
+  // Migración: agregar instructor_id si no existe (DBs previas)
+  try { db.run(`ALTER TABLE vuelos ADD COLUMN instructor_id INTEGER`); } catch(e) {}
 
   if (get('SELECT COUNT(*) as n FROM pilotos').n === 0) seedData();
 }
