@@ -1,0 +1,4 @@
+node_modules/
+db/aeroclub.db
+*.log
+.env

@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistema de Vuelos - Aeroclub</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <span class="logo">✈️</span>
+  <h1>Sistema de Vuelos &mdash; Aeroclub</h1>
+  <span id="fecha-hoy"></span>
+</header>
+
+<!-- NAV -->
+<nav>
+  <button data-tab="vuelos"    onclick="setTab('vuelos')"    class="active">✈️ Vuelos</button>
+  <button data-tab="pilotos"   onclick="setTab('pilotos')"           >👨‍✈️ Pilotos</button>
+  <button data-tab="aeronaves" onclick="setTab('aeronaves')"         >🛩️ Aeronaves</button>
+</nav>
+
+<!-- MAIN -->
+<main>
+
+  <!-- STATS -->
+  <div class="stats-grid">
+    <div class="stat-card"><div class="value" id="stat-total">—</div><div class="label">Total Vuelos</div></div>
+    <div class="stat-card"><div class="value" id="stat-en-vuelo">—</div><div class="label">En Vuelo</div></div>
+    <div class="stat-card"><div class="value" id="stat-completados">—</div><div class="label">Completados</div></div>
+    <div class="stat-card"><div class="value" id="stat-horas-hoy">—</div><div class="label">Horas Hoy</div></div>
+    <div class="stat-card"><div class="value" id="stat-pilotos">—</div><div class="label">Pilotos Activos</div></div>
+    <div class="stat-card"><div class="value" id="stat-aeronaves">—</div><div class="label">Aeronaves Operativas</div></div>
+  </div>
+
+  <!-- TAB: VUELOS -->
+  <div id="tab-vuelos" class="tab-content">
+    <div class="card">
+      <div class="card-header">
+        <h2>✈️ Registro de Vuelos</h2>
+        <button class="btn btn-primary" onclick="openVueloModal()">+ Nuevo Vuelo</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr>
+              <th>Fecha / Horario</th>
+              <th>Piloto</th>
+              <th>Aeronave</th>
+              <th>Ruta</th>
+              <th>Tipo</th>
+              <th>Duración</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="vuelos-tbody">
+            <tr><td colspan="8" style="text-align:center;padding:32px;color:#94a3b8">Cargando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: PILOTOS -->
+  <div id="tab-pilotos" class="tab-content" style="display:none">
+    <div class="card">
+      <div class="card-header">
+        <h2>👨‍✈️ Pilotos</h2>
+        <button class="btn btn-primary" onclick="openPilotoModal()">+ Nuevo Piloto</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr>
+              <th>Nombre</th><th>DNI</th><th>Licencia</th>
+              <th>Categoría</th><th>Horas de Vuelo</th><th>Email</th><th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="pilotos-tbody">
+            <tr><td colspan="7" style="text-align:center;padding:32px;color:#94a3b8">Cargando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: AERONAVES -->
+  <div id="tab-aeronaves" class="tab-content" style="display:none">
+    <div class="card">
+      <div class="card-header">
+        <h2>🛩️ Aeronaves</h2>
+        <button class="btn btn-primary" onclick="openAeronaveModal()">+ Nueva Aeronave</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr>
+              <th>Matrícula</th><th>Aeronave</th><th>Tipo</th>
+              <th>Motor</th><th>Año</th><th>Horas Totales</th><th>Estado</th><th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="aeronaves-tbody">
+            <tr><td colspan="8" style="text-align:center;padding:32px;color:#94a3b8">Cargando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ============ MODAL: VUELO ============ -->
+<div class="modal-overlay" id="modal-vuelo">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modal-vuelo-title">Nuevo Vuelo</h3>
+      <button class="modal-close" onclick="$('modal-vuelo').classList.remove('open')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="form-vuelo" class="form-grid">
+        <div class="form-group form-full">
+          <label>Piloto *</label>
+          <select id="v-piloto"></select>
+        </div>
+        <div class="form-group form-full">
+          <label>Aeronave *</label>
+          <select id="v-aeronave"></select>
+        </div>
+        <div class="form-group">
+          <label>Fecha *</label>
+          <input type="date" id="v-fecha">
+        </div>
+        <div class="form-group">
+          <label>Tipo de Vuelo</label>
+          <select id="v-tipo">
+            <option>Local</option>
+            <option>Instruccion</option>
+            <option>Traslado</option>
+            <option>Acrobatico</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Hora Despegue *</label>
+          <input type="time" id="v-despegue">
+        </div>
+        <div class="form-group">
+          <label>Hora Aterrizaje</label>
+          <input type="time" id="v-aterrizaje">
+        </div>
+        <div class="form-group">
+          <label>Origen *</label>
+          <input type="text" id="v-origen" placeholder="Ej: Villa Dolores">
+        </div>
+        <div class="form-group">
+          <label>Destino *</label>
+          <input type="text" id="v-destino" placeholder="Ej: Córdoba">
+        </div>
+        <div class="form-group">
+          <label>Duración (minutos)</label>
+          <input type="number" id="v-duracion" placeholder="Ej: 90">
+        </div>
+        <div class="form-group">
+          <label>Estado</label>
+          <select id="v-estado">
+            <option>Planificado</option>
+            <option>En Vuelo</option>
+            <option>Completado</option>
+            <option>Cancelado</option>
+          </select>
+        </div>
+        <div class="form-group form-full">
+          <label>Observaciones</label>
+          <textarea id="v-obs" rows="2" placeholder="Notas adicionales..."></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="$('modal-vuelo').classList.remove('open')" style="background:#f1f5f9">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveVuelo()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODAL: PILOTO ============ -->
+<div class="modal-overlay" id="modal-piloto">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modal-piloto-title">Nuevo Piloto</h3>
+      <button class="modal-close" onclick="$('modal-piloto').classList.remove('open')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="form-piloto" class="form-grid">
+        <div class="form-group">
+          <label>Nombre *</label>
+          <input type="text" id="p-nombre" placeholder="Francisco">
+        </div>
+        <div class="form-group">
+          <label>Apellido *</label>
+          <input type="text" id="p-apellido" placeholder="García">
+        </div>
+        <div class="form-group">
+          <label>DNI *</label>
+          <input type="text" id="p-dni" placeholder="28.111.222">
+        </div>
+        <div class="form-group">
+          <label>N° Licencia *</label>
+          <input type="text" id="p-licencia" placeholder="PPL-0001">
+        </div>
+        <div class="form-group">
+          <label>Categoría *</label>
+          <select id="p-categoria">
+            <option value="PPL">PPL - Piloto Privado</option>
+            <option value="CPL">CPL - Piloto Comercial</option>
+            <option value="ATPL">ATPL - Piloto de Línea Aérea</option>
+            <option value="PVL">PVL - Piloto de Planeador</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Horas de Vuelo</label>
+          <input type="number" id="p-horas" placeholder="0" step="0.5">
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="p-email" placeholder="piloto@aeroclub.com">
+        </div>
+        <div class="form-group">
+          <label>Teléfono</label>
+          <input type="text" id="p-tel" placeholder="351-111-2222">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="$('modal-piloto').classList.remove('open')" style="background:#f1f5f9">Cancelar</button>
+      <button class="btn btn-primary" onclick="savePiloto()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODAL: AERONAVE ============ -->
+<div class="modal-overlay" id="modal-aeronave">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modal-aeronave-title">Nueva Aeronave</h3>
+      <button class="modal-close" onclick="$('modal-aeronave').classList.remove('open')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="form-aeronave" class="form-grid">
+        <div class="form-group">
+          <label>Matrícula *</label>
+          <input type="text" id="a-matricula" placeholder="LV-ABC">
+        </div>
+        <div class="form-group">
+          <label>Tipo *</label>
+          <select id="a-tipo">
+            <option>Avion</option>
+            <option>Planeador</option>
+            <option>Ultraliviano</option>
+            <option>Helicoptero</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Marca *</label>
+          <input type="text" id="a-marca" placeholder="Cessna">
+        </div>
+        <div class="form-group">
+          <label>Modelo *</label>
+          <input type="text" id="a-modelo" placeholder="172 Skyhawk">
+        </div>
+        <div class="form-group">
+          <label>Motor</label>
+          <input type="text" id="a-motor" placeholder="Lycoming O-320">
+        </div>
+        <div class="form-group">
+          <label>Año</label>
+          <input type="number" id="a-año" placeholder="1985">
+        </div>
+        <div class="form-group">
+          <label>Estado</label>
+          <select id="a-estado">
+            <option>Operativa</option>
+            <option>En Mantenimiento</option>
+            <option>Baja</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Horas Totales</label>
+          <input type="number" id="a-horas" placeholder="0" step="0.5">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="$('modal-aeronave').classList.remove('open')" style="background:#f1f5f9">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveAeronave()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script src="/js/app.js"></script>
+<script>
+  $('fecha-hoy').textContent = new Date().toLocaleDateString('es-AR', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
+</script>
+
+</body>
+</html>
